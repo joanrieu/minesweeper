@@ -85,22 +85,56 @@ handle command game =
 
 revealCell : Position -> Game -> Game
 revealCell position game =
-    (CellRevealed position) :: game
+    if isMine position game then
+        allMines game
+            |> Set.toList
+            |> List.map CellRevealed
+            |> List.foldr (::) (GameLost :: game)
+    else
+        let
+            propagate =
+                neighbourMineCount position game == 0
+
+            ( x, y ) =
+                position
+
+            deltas =
+                if propagate then
+                    neighbourPositionDeltas
+                else
+                    []
+
+            positions =
+                deltas
+                    |> List.map (\( dx, dy ) -> ( x + dx, y + dy ))
+                    |> List.filter (\pos -> not (isVisible pos game))
+        in
+            List.foldr revealCell (CellRevealed position :: game) positions
 
 
-isMine : Position -> Game -> Maybe Bool
-isMine position game =
+allMines : Game -> Set Position
+allMines game =
     case game of
         event :: events ->
             case event of
                 GameStarted _ positions ->
-                    Just (Set.member position positions)
+                    positions
 
                 _ ->
-                    isMine position events
+                    allMines events
 
         _ ->
-            Nothing
+            Set.empty
+
+
+isMine : Position -> Game -> Bool
+isMine position game =
+    Set.member position (allMines game)
+
+
+neighbourPositionDeltas : List Position
+neighbourPositionDeltas =
+    [ ( -1, -1 ), ( 0, -1 ), ( 1, -1 ), ( -1, 0 ), ( 1, 0 ), ( -1, 1 ), ( 0, 1 ), ( 1, 1 ) ]
 
 
 neighbourMineCount : Position -> Game -> Int
@@ -109,14 +143,11 @@ neighbourMineCount position game =
         ( x, y ) =
             position
 
-        deltas =
-            [ ( -1, -1 ), ( 0, -1 ), ( 1, -1 ), ( -1, 0 ), ( 1, 0 ), ( -1, 1 ), ( 0, 1 ), ( 1, 1 ) ]
-
         neighbours =
-            deltas
+            neighbourPositionDeltas
                 |> List.map (\( dx, dy ) -> ( x + dx, y + dy ))
                 |> List.map (\pos -> isMine pos game)
-                |> List.filterMap identity
+                |> List.filter identity
     in
         neighbours
             |> List.filter ((==) True)
@@ -133,6 +164,19 @@ isVisible position game =
                         True
                     else
                         isVisible position events
+
+                GameStarted difficulty _ ->
+                    let
+                        ( x, y ) =
+                            position
+
+                        insideBounds =
+                            (x > 0)
+                                && (x <= difficulty.width)
+                                && (y > 0)
+                                && (y <= difficulty.height)
+                    in
+                        not insideBounds
 
                 _ ->
                     isVisible position events

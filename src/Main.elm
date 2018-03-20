@@ -41,7 +41,21 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div []
+    div
+        [ style
+            [ ( "display", "flex" )
+            , ( "flex-direction", "column" )
+            , ( "align-items", "center" )
+            ]
+        ]
+        [ h1 [] [ text "Minesweeper" ]
+        , viewCells model
+        ]
+
+
+viewCells : Model -> Html Msg
+viewCells model =
+    table [ style [ ( "font-size", "2em" ) ] ]
         (List.map
             (\y ->
                 tr
@@ -64,7 +78,7 @@ view model =
 viewCell : M.Position -> M.Game -> Html Msg
 viewCell position game =
     if M.isVisible position game then
-        if M.isMine position game |> Maybe.withDefault False then
+        if M.isMine position game then
             bombCell
         else
             let
@@ -90,7 +104,7 @@ bombCell =
 emptyCell : Html Msg
 emptyCell =
     td [ style [ ( "background", "lightgrey" ) ] ]
-        []
+        [ text " " ]
 
 
 neighbourCell : Int -> Html Msg
