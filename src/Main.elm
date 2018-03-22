@@ -50,29 +50,45 @@ view model =
         ]
         [ h1 [] [ text "Minesweeper" ]
         , viewCells model
+        , node "style"
+            []
+            [ "td {"
+                ++ "width: 1em;"
+                ++ "height: 1em;"
+                ++ "text-align: center;"
+                ++ "vertical-align: middle;"
+                ++ "line-height: 1;"
+                ++ "}"
+                |> text
+            ]
         ]
 
 
 viewCells : Model -> Html Msg
 viewCells model =
-    table [ style [ ( "font-size", "2em" ) ] ]
-        (List.map
-            (\y ->
-                tr
-                    []
-                    (List.map
-                        (\x -> viewCell ( x, y ) model.game)
-                        (List.range
-                            1
-                            model.difficulty.width
-                        )
-                    )
-            )
-            (List.range
+    let
+        cols =
+            List.range
+                1
+                model.difficulty.width
+
+        rows =
+            List.range
                 1
                 model.difficulty.height
+    in
+        table [ style [ ( "font-size", "2em" ) ] ]
+            (List.map
+                (\y ->
+                    tr
+                        []
+                        (List.map
+                            (\x -> viewCell ( x, y ) model.game)
+                            cols
+                        )
+                )
+                rows
             )
-        )
 
 
 viewCell : M.Position -> M.Game -> Html Msg
@@ -109,9 +125,36 @@ emptyCell =
 
 neighbourCell : Int -> Html Msg
 neighbourCell count =
-    td
-        [ style [ ( "color", "blue" ) ] ]
-        [ count |> toString |> text ]
+    let
+        color =
+            case count of
+                1 ->
+                    "blue"
+
+                2 ->
+                    "green"
+
+                3 ->
+                    "red"
+
+                4 ->
+                    "purple"
+
+                5 ->
+                    "brown"
+
+                6 ->
+                    "turquoise"
+
+                7 ->
+                    "black"
+
+                _ ->
+                    "grey"
+    in
+        td
+            [ style [ ( "color", color ), ( "background", "lightgrey" ) ] ]
+            [ count |> toString |> text ]
 
 
 unknownCell : M.Position -> Html Msg
@@ -120,7 +163,7 @@ unknownCell position =
         [ position |> M.RevealCell |> GameCommand |> onClick
         , style [ ( "background", "grey" ) ]
         ]
-        [ text "?" ]
+        []
 
 
 subscriptions : Model -> Sub Msg
