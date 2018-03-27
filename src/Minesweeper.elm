@@ -85,7 +85,9 @@ handle command game =
 
 revealCell : Position -> Game -> Game
 revealCell position game =
-    if isMine position game then
+    if isFinished game then
+        game
+    else if isMine position game then
         allMines game
             |> Set.toList
             |> List.map CellRevealed
@@ -180,6 +182,24 @@ isVisible position game =
 
                 _ ->
                     isVisible position events
+
+        _ ->
+            False
+
+
+isFinished : Game -> Bool
+isFinished game =
+    case game of
+        event :: events ->
+            case event of
+                GameWon ->
+                    True
+
+                GameLost ->
+                    True
+
+                _ ->
+                    isFinished events
 
         _ ->
             False
