@@ -66,7 +66,7 @@ noGame =
 
 type Command
     = StartGame Difficulty
-    | StartGameDeterministically Difficulty (Set Position)
+    | GenerateGame Difficulty (Set Position)
     | RevealCell Position
     | FlagCell Position
 
@@ -75,43 +75,31 @@ handle : Command -> Game -> ( Game, Cmd Command )
 handle command game =
     case command of
         StartGame difficulty ->
-            ( game
-            , Random.generate
-                (StartGameDeterministically difficulty)
-                (Random.map
-                    Set.fromList
-                    (Random.list
-                        difficulty.mines
-                        (Random.map2
-                            (\x -> \y -> ( x, y ))
-                            (Random.int 1 difficulty.width)
-                            (Random.int 1 difficulty.height)
-                        )
-                    )
-                )
-            )
+            handle (GenerateGame difficulty Set.empty) game
 
-        StartGameDeterministically difficulty mines ->
-            let
-                generatedMineCount =
-                    Set.size mines
-            in
-                if generatedMineCount == difficulty.mines then
-                    ( [ GameStarted difficulty mines ]
-                    , Cmd.none
-                    )
-                else
-                    handle (StartGame difficulty) game
+        GenerateGame difficulty mines ->
+            if Set.size mines < difficulty.mines then
+                let
+                    addMine mine =
+                        GenerateGame difficulty (Set.insert mine mines)
+
+                    command =
+                        Random.generate
+                            addMine
+                            (Random.pair
+                                (Random.int 1 difficulty.width)
+                                (Random.int 1 difficulty.height)
+                            )
+                in
+                    ( game, command )
+            else
+                ( [ GameStarted difficulty mines ], Cmd.none )
 
         RevealCell position ->
-            ( revealCell position game
-            , Cmd.none
-            )
+            ( revealCell position game, Cmd.none )
 
         FlagCell position ->
-            ( (CellFlagged position) :: game
-            , Cmd.none
-            )
+            ( (CellFlagged position) :: game, Cmd.none )
 
 
 revealCell : Position -> Game -> Game
