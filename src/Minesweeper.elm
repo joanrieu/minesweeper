@@ -11,11 +11,35 @@ type alias Difficulty =
     }
 
 
+noDifficulty : Difficulty
+noDifficulty =
+    { width = 0
+    , height = 0
+    , mines = 0
+    }
+
+
 beginnerDifficulty : Difficulty
 beginnerDifficulty =
     { width = 9
     , height = 9
     , mines = 10
+    }
+
+
+intermediateDifficulty : Difficulty
+intermediateDifficulty =
+    { width = 16
+    , height = 16
+    , mines = 40
+    }
+
+
+expertDifficulty : Difficulty
+expertDifficulty =
+    { width = 30
+    , height = 16
+    , mines = 99
     }
 
 
@@ -243,3 +267,18 @@ isWon game =
                     False
     in
         isWonRec game 0
+
+
+gameDifficulty : Game -> Difficulty
+gameDifficulty game =
+    case game of
+        event :: events ->
+            case event of
+                GameStarted difficulty _ ->
+                    difficulty
+
+                _ ->
+                    gameDifficulty events
+
+        _ ->
+            noDifficulty

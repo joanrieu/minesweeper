@@ -16,66 +16,102 @@ main =
         }
 
 
-type alias Model =
-    { game : M.Game
-    , difficulty : M.Difficulty
-    }
+type Model
+    = TitleScreen
+    | GameScreen Game
 
 
 type Msg
-    = GameCommand M.Command
+    = GameCommand Command
+    | NewGame Difficulty
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        GameCommand command ->
-            let
-                ( game, commands ) =
-                    M.handle command model.game
-            in
-                ( { model | game = game }
-                , commands |> Cmd.map GameCommand
-                )
+    case model of
+        TitleScreen ->
+            case msg of
+                NewGame difficulty ->
+                    newGame difficulty
+
+                _ ->
+                    ( model, Cmd.none )
+
+        GameScreen game ->
+            case msg of
+                GameCommand command ->
+                    let
+                        ( updatedGame, commands ) =
+                            handle command game
+                    in
+                        ( GameScreen updatedGame
+                        , commands |> Cmd.map GameCommand
+                        )
+
+                NewGame difficulty ->
+                    init
 
 
 view : Model -> Html Msg
 view model =
-    div
-        [ style
-            [ ( "display", "flex" )
-            , ( "flex-direction", "column" )
-            , ( "align-items", "center" )
+    let
+        contents =
+            case model of
+                TitleScreen ->
+                    [ button [ onClick (NewGame beginnerDifficulty) ] [ text "Beginner" ]
+                    , button [ onClick (NewGame intermediateDifficulty) ] [ text "Intermediate" ]
+                    , button [ onClick (NewGame expertDifficulty) ] [ text "Expert" ]
+                    ]
+
+                GameScreen game ->
+                    [ button [ onClick (NewGame noDifficulty) ] [ text "New Game" ]
+                    , viewCells game
+                    , node "style"
+                        []
+                        [ "td {"
+                            ++ "width: 1em;"
+                            ++ "height: 1em;"
+                            ++ "text-align: center;"
+                            ++ "vertical-align: middle;"
+                            ++ "line-height: 1;"
+                            ++ "}"
+                            |> text
+                        ]
+                    ]
+    in
+        div
+            [ style
+                [ ( "display", "flex" )
+                , ( "flex-direction", "column" )
+                , ( "align-items", "center" )
+                ]
             ]
-        ]
-        [ h1 [] [ text "Minesweeper" ]
-        , viewCells model
-        , node "style"
-            []
-            [ "td {"
-                ++ "width: 1em;"
-                ++ "height: 1em;"
-                ++ "text-align: center;"
-                ++ "vertical-align: middle;"
-                ++ "line-height: 1;"
-                ++ "}"
-                |> text
-            ]
-        ]
+            ((h1 [] [ text "Minesweeper" ])
+                :: (node "style"
+                        []
+                        [ "button {"
+                            ++ "margin: 1em;"
+                            ++ "padding: .2em .5em;"
+                            ++ "}"
+                            |> text
+                        ]
+                   )
+                :: contents
+            )
 
 
-viewCells : Model -> Html Msg
-viewCells model =
+viewCells : Game -> Html Msg
+viewCells game =
     let
         cols =
             List.range
                 1
-                model.difficulty.width
+                (gameDifficulty game).width
 
         rows =
             List.range
                 1
-                model.difficulty.height
+                (gameDifficulty game).height
     in
         table [ style [ ( "font-size", "2em" ) ] ]
             (List.map
@@ -83,7 +119,7 @@ viewCells model =
                     tr
                         []
                         (List.map
-                            (\x -> viewCell ( x, y ) model.game)
+                            (\x -> viewCell ( x, y ) game)
                             cols
                         )
                 )
@@ -91,10 +127,10 @@ viewCells model =
             )
 
 
-viewCell : M.Position -> M.Game -> Html Msg
+viewCell : Position -> Game -> Html Msg
 viewCell position game =
-    if M.isVisible position game then
-        if M.isMine position game then
+    if isVisible position game then
+        if isMine position game then
             bombCell
         else
             let
@@ -157,10 +193,10 @@ neighbourCell count =
             [ count |> toString |> text ]
 
 
-unknownCell : M.Position -> Html Msg
+unknownCell : Position -> Html Msg
 unknownCell position =
     td
-        [ position |> M.RevealCell |> GameCommand |> onClick
+        [ position |> RevealCell |> GameCommand |> onClick
         , style [ ( "background", "grey" ) ]
         ]
         []
@@ -173,15 +209,15 @@ subscriptions model =
 
 init : ( Model, Cmd Msg )
 init =
-    let
-        difficulty =
-            beginnerDifficulty
+    ( TitleScreen, Cmd.none )
 
+
+newGame : Difficulty -> ( Model, Cmd Msg )
+newGame difficulty =
+    let
         ( game, commands ) =
-            M.handle (StartGame difficulty) M.noGame
+            handle (StartGame difficulty) noGame
     in
-        ( { game = game
-          , difficulty = difficulty
-          }
+        ( GameScreen game
         , commands |> Cmd.map GameCommand
         )
