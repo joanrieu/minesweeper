@@ -92,7 +92,7 @@ handle command game =
 
 revealCell : Position -> Game -> Game
 revealCell position game =
-    if isFinished game then
+    if isFinished game || isVisible position game then
         game
     else if isMine position game then
         allMines game
@@ -101,24 +101,29 @@ revealCell position game =
             |> List.foldr (::) (GameLost :: game)
     else
         let
-            propagate =
-                neighbourMineCount position game == 0
-
             ( x, y ) =
                 position
 
-            deltas =
+            gameWithRevealedCell =
+                CellRevealed position :: game
+
+            propagate =
+                neighbourMineCount position game == 0
+
+            positions =
                 if propagate then
-                    neighbourPositionDeltas
+                    List.map (\( dx, dy ) -> ( x + dx, y + dy ))
+                        neighbourPositionDeltas
                 else
                     []
 
-            positions =
-                deltas
-                    |> List.map (\( dx, dy ) -> ( x + dx, y + dy ))
-                    |> List.filter (\pos -> not (isVisible pos game))
+            gameWithPropagatedRevealedCells =
+                List.foldr revealCell gameWithRevealedCell positions
         in
-            List.foldr revealCell (CellRevealed position :: game) positions
+            if isWon gameWithPropagatedRevealedCells then
+                GameWon :: gameWithPropagatedRevealedCells
+            else
+                gameWithPropagatedRevealedCells
 
 
 allMines : Game -> Set Position
@@ -180,9 +185,9 @@ isVisible position game =
                             position
 
                         insideBounds =
-                            (x > 0)
+                            (x >= 1)
                                 && (x <= difficulty.width)
-                                && (y > 0)
+                                && (y >= 1)
                                 && (y <= difficulty.height)
                     in
                         not insideBounds
@@ -210,3 +215,31 @@ isFinished game =
 
         _ ->
             False
+
+
+isWon : Game -> Bool
+isWon game =
+    let
+        isWonRec game revealedCells =
+            case game of
+                event :: events ->
+                    case event of
+                        GameWon ->
+                            True
+
+                        GameLost ->
+                            False
+
+                        CellRevealed _ ->
+                            isWonRec events (revealedCells + 1)
+
+                        GameStarted difficulty _ ->
+                            revealedCells == difficulty.width * difficulty.height - difficulty.mines
+
+                        _ ->
+                            isWonRec events revealedCells
+
+                _ ->
+                    False
+    in
+        isWonRec game 0
