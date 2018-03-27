@@ -66,17 +66,6 @@ view model =
                 GameScreen game ->
                     [ button [ onClick (NewGame noDifficulty) ] [ text "New Game" ]
                     , viewCells game
-                    , node "style"
-                        []
-                        [ "td {"
-                            ++ "width: 1em;"
-                            ++ "height: 1em;"
-                            ++ "text-align: center;"
-                            ++ "vertical-align: middle;"
-                            ++ "line-height: 1;"
-                            ++ "}"
-                            |> text
-                        ]
                     ]
     in
         div
@@ -113,17 +102,34 @@ viewCells game =
                 1
                 (gameDifficulty game).height
     in
-        table [ style [ ( "font-size", "2em" ) ] ]
-            (List.map
-                (\y ->
-                    tr
-                        []
-                        (List.map
-                            (\x -> viewCell ( x, y ) game)
-                            cols
+        table []
+            ((node "style"
+                []
+                [ "table {"
+                    ++ "font-size: 2em;"
+                    ++ "margin: 1em;"
+                    ++ "}"
+                    ++ "td {"
+                    ++ "width: 1em;"
+                    ++ "height: 1em;"
+                    ++ "text-align: center;"
+                    ++ "vertical-align: middle;"
+                    ++ "line-height: 1;"
+                    ++ "}"
+                    |> text
+                ]
+             )
+                :: (List.map
+                        (\y ->
+                            tr
+                                []
+                                (List.map
+                                    (\x -> viewCell ( x, y ) game)
+                                    cols
+                                )
                         )
-                )
-                rows
+                        rows
+                   )
             )
 
 
