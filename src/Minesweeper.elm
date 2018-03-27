@@ -67,10 +67,17 @@ handle command game =
                 )
             )
 
-        StartGameDeterministically difficulty positions ->
-            ( [ GameStarted difficulty positions ]
-            , Cmd.none
-            )
+        StartGameDeterministically difficulty mines ->
+            let
+                generatedMineCount =
+                    Set.size mines
+            in
+                if generatedMineCount == difficulty.mines then
+                    ( [ GameStarted difficulty mines ]
+                    , Cmd.none
+                    )
+                else
+                    handle (StartGame difficulty) game
 
         RevealCell position ->
             ( revealCell position game
